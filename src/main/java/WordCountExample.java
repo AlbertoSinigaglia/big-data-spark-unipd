@@ -12,8 +12,9 @@ import java.util.*;
 
 public class WordCountExample{
 
+
     /**
-     * To run use <<1 datasets/word_count_dataset.txt>>  as CLI arguments in your configuration
+     * To run use <<1 datasets/word_count/dataset.txt>>  as CLI arguments in your configuration
      */
     public static void main(String[] args) throws IOException {
 
