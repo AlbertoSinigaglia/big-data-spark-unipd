@@ -117,33 +117,6 @@ public class HW1 {
             // sum relative frequency, from (P, |P in partition|) to (P, Sum |P in partition|)
             .map(tuple -> new Tuple2<>(tuple._1, StreamSupport.stream(tuple._2.spliterator(), false).reduce(0L, Long::sum)));
 
-
-            /* PERCHE' NON VAAAA
-
-            .mapPartitionsToPair(group ->
-                Stream.generate(() -> null)
-                    .takeWhile(x -> group.hasNext())
-                    .map(n -> group.next())
-                    .map(el -> el._2.iterator().next())
-                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                    .entrySet()
-                    .stream()
-                    .map(entry -> new Tuple2<>(entry.getKey(), entry.getValue()))
-                    .iterator())
-            .groupByKey()
-            .mapPartitions(group ->
-                Stream.generate(() -> null)
-                        .takeWhile(x -> group.hasNext())
-                        .map(n -> group.next())
-                        .map(el -> new Tuple2<>(
-                            el._1,
-                            Stream.generate(() -> null)
-                                .takeWhile(x -> el._2.iterator().hasNext())
-                                .map(n -> el._2.iterator().next())
-                                .reduce(0L, Long::sum))
-                        ).iterator()
-            );*/
-
         final var pairs1 = H > 0 ?
             // take top H elements, using a ProductPopularityPairComparator, but reversed (top = highest)
             productPopularity1.takeOrdered(H, new ProductPopularityPairComparator().reversed()) :
