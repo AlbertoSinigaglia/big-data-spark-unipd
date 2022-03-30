@@ -8,7 +8,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
+class e{
+    public static void main(String[] args) {
+        System.out.println("asd");
+    }
+}
 public class HW1 {
     static class ProductPopularityPairComparator implements Comparator<Tuple2<String, Long>>, Serializable {
         public int compare(Tuple2<String, Long> t1, Tuple2<String, Long> t2) {
@@ -49,31 +53,23 @@ public class HW1 {
             .filter(record -> Integer.parseInt(record[3]) > 0)
             // consider only the ones from S or everything if S == "all"
             .filter(record -> Objects.equals(S, "all") || record[7].equals(S))
+            // map to (P,C)
+            .map(record -> new Tuple2<>(record[1], Integer.parseInt(record[6])))
             // map to ((P,C), (P,C))
-            .mapToPair(record -> new Tuple2<>(new Tuple2<>(record[1], Integer.parseInt(record[6])), new Tuple2<>(record[1], Integer.parseInt(record[6]))))
+            .mapToPair(pair -> new Tuple2<>(pair, pair))
             // group pairs of (P,C), removing duplicate (P,C) pairs
             .groupByKey()
             // consider only the first one for each group
-            .map(group -> group._2.iterator().next());
+            .map(Tuple2::_1);
 
 
         final var productPopularity1 = productCustomer
-            // from (P,C) to (rand(K),P) to make sqrt(N) partitions
-            .mapPartitionsToPair(group -> {
-                var list  = new ArrayList<Tuple2<Integer, String>>();
-                while (group.hasNext()) {
-                    var pair = group.next();
-                    list.add(new Tuple2<>(randomGenerator.nextInt(K), pair._1));
-                }
-                return list.iterator();
-            })
-            // group by rand(K)
-            .groupByKey()
-            //from (rand(K), P) to (P, |P in partition|)
+            //from partitions to (P, |P in partitions|)
             .mapPartitionsToPair(group -> {
                 var map = new HashMap<String, Long>();
                 while(group.hasNext()){
-                    group.next()._2.forEach( id -> map.put(id, map.getOrDefault(id, 0L) + 1));
+                    var next = group.next();
+                    map.put(next._1, map.getOrDefault(next._1, 0L) + 1);
                 }
                 return map.entrySet().stream()
                     .map(entry-> new Tuple2<>(entry.getKey(), entry.getValue()))
@@ -129,9 +125,9 @@ public class HW1 {
             // take all elements
             productPopularity2.collect();
 
-        pairs1.stream().sorted(Comparator.comparing(a -> a._1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
-        System.out.println("");
-        pairs2.stream().sorted(Comparator.comparing(a -> a._1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
+        pairs1.stream().sorted(Comparator.comparing(Tuple2::_1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
+        System.out.println();
+        pairs2.stream().sorted(Comparator.comparing(Tuple2::_1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
 
     }
 }
