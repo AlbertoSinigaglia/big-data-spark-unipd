@@ -125,9 +125,12 @@ public class HW1 {
             // take all elements
             productPopularity2.collect();
 
-        pairs1.stream().sorted(Comparator.comparing(Tuple2::_1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
-        System.out.println();
-        pairs2.stream().sorted(Comparator.comparing(Tuple2::_1)).forEach(t -> System.out.print("| " +t._1 + " --- " + t._2 + " |"));
+        System.out.println("Number of rows = " + rawData.count());
+        System.out.println("Product-Customer Pairs = " + productCustomer.count());
+        System.out.println("Top 5 Products and their Popularities");
+        Stream.of(pairs1.stream(),pairs2.stream())
+            .map(s -> s.map(t -> "Product "+t._1+" Popularity "+t._2+"; ").collect(Collectors.joining("")))
+            .forEach(System.out::println);
 
     }
 }
