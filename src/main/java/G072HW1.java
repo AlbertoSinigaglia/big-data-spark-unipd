@@ -9,9 +9,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class HW1 {
-    static class ProductPopularityPairComparator implements Comparator<Tuple2<String, Long>>, Serializable {
-        public int compare(Tuple2<String, Long> t1, Tuple2<String, Long> t2) {
+public class G072HW1 {
+    static class ProductPopularityPairComparator implements Comparator<Tuple2<String, Integer>>, Serializable {
+        public int compare(Tuple2<String, Integer> t1, Tuple2<String, Integer> t2) {
             return t1._2.compareTo(t2._2);
         }
     }
@@ -27,7 +27,7 @@ public class HW1 {
             throw new IllegalArgumentException("USAGE: num_partitions top_products country_name_filter file_path");
         }
 
-        final SparkConf conf = new SparkConf(true).setAppName("WordCount").set("spark.master", "local");
+        final SparkConf conf = new SparkConf(true).setAppName("G072HW1").set("spark.master", "local");
         final JavaSparkContext sc = new JavaSparkContext(conf);
         sc.setLogLevel("OFF");
 
@@ -42,6 +42,10 @@ public class HW1 {
         // Random generator for partitions
         final Random randomGenerator = new Random();
 
+        final org.apache.spark.api.java.function.Function<Map<String, Integer>, Iterator<Tuple2<String, Integer>>> mapToIterable = map -> map.entrySet().stream()
+            .map(entry -> new Tuple2<>(entry.getKey(), entry.getValue()))
+            .iterator();
+
         final var productCustomer = rawData
             // "explode" the lines
             .map( line -> line.split(","))
@@ -51,10 +55,8 @@ public class HW1 {
             .filter(record -> Objects.equals(S, "all") || record[7].equals(S))
             // map to (P,C)
             .map(record -> new Tuple2<>(record[1], Integer.parseInt(record[6])))
-            // map to ((P,C), (P,C))
-            .mapToPair(pair -> new Tuple2<>(pair, pair))
-            // group pairs of (P,C), removing duplicate (P,C) pairs
-            .groupByKey()
+            // group by (P,C) to remove duplicates
+            .groupBy(t -> t)
             // consider only the first one for each group
             .map(Tuple2::_1);
 
@@ -62,34 +64,30 @@ public class HW1 {
         final var productPopularity1 = productCustomer
             //from partitions to (P, |P in partitions|)
             .mapPartitionsToPair(group -> {
-                var map = new HashMap<String, Long>();
+                var map = new HashMap<String, Integer>();
                 while(group.hasNext()){
                     var next = group.next();
-                    map.put(next._1, map.getOrDefault(next._1, 0L) + 1);
+                    map.put(next._1, map.getOrDefault(next._1, 0) + 1);
                 }
-                return map.entrySet().stream()
-                    .map(entry-> new Tuple2<>(entry.getKey(), entry.getValue()))
-                    .iterator();
+                return mapToIterable.call(map);
             })
             // group by key P, at most K pairs per group
             .groupByKey()
             // sum relative frequency, from (P, |P in partition|) to (P, Sum |P in partition|)
             .mapPartitionsToPair(group -> {
-                var map = new HashMap<String, Long>();
+                var map = new HashMap<String, Integer>();
                 while(group.hasNext()){
                     var current = group.next();
-                    map.put(current._1, StreamSupport.stream(current._2.spliterator(), false).reduce(0L, Long::sum));
+                    map.put(current._1, StreamSupport.stream(current._2.spliterator(), false).reduce(0, Integer::sum));
                 }
-                return map.entrySet().stream()
-                    .map(entry-> new Tuple2<>(entry.getKey(), entry.getValue()))
-                    .iterator();
+                return mapToIterable.call(map);
             });
 
         final var productPopularity2 = productCustomer
             // from (P,C) to (rand(K), P) where K=sqrt(N)
-            .mapToPair( pair -> new Tuple2<>(randomGenerator.nextInt(K), pair._1))
+            .map(Tuple2::_1)
             // group by rand(K)
-            .groupByKey()
+            .groupBy(el -> randomGenerator.nextInt(K))
             // foreach (rand(K), (P1, P2, ...))
             .map(group -> group._2.iterator())
             // move from iterator of the value to a stream for convenience
@@ -97,17 +95,13 @@ public class HW1 {
                 Stream.generate(() -> null)
                     .takeWhile(x -> iterator.hasNext())
                     .map(n -> iterator.next()))
-            // foreach stream, generate a map of (P, |P in stream(partition)|) and then from map to list of tuple
-            .flatMapToPair(stream ->
-                stream.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                    .entrySet()
-                    .stream()
-                    .map(entry-> new Tuple2<>(entry.getKey(), entry.getValue()))
-                    .iterator())
+            // foreach stream, generate a map of (P, |P in stream(partition)|) and then from map to iterable of tuple
+            .map(stream -> stream.collect(Collectors.groupingBy(Function.identity(), Collectors.summingInt(x -> 1))))
+            .flatMapToPair(mapToIterable::call)
             // group by key P, at most K pairs per group
             .groupByKey()
             // sum relative frequency, from (P, |P in partition|) to (P, Sum |P in partition|)
-            .map(tuple -> new Tuple2<>(tuple._1, StreamSupport.stream(tuple._2.spliterator(), false).reduce(0L, Long::sum)));
+            .map(tuple -> new Tuple2<>(tuple._1, StreamSupport.stream(tuple._2.spliterator(), false).reduce(0, Integer::sum)));
 
         final var pairs1 = H > 0 ?
             // take top H elements, using a ProductPopularityPairComparator, but reversed (top = highest)
