@@ -8,11 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-class e{
-    public static void main(String[] args) {
-        System.out.println("asd");
-    }
-}
+
 public class HW1 {
     static class ProductPopularityPairComparator implements Comparator<Tuple2<String, Long>>, Serializable {
         public int compare(Tuple2<String, Long> t1, Tuple2<String, Long> t2) {
