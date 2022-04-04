@@ -91,17 +91,12 @@ public class G072HW1 {
             // foreach (rand(K), (P1, P2, ...))
             .map(group -> group._2.iterator())
             // move from iterator of the value to a stream for convenience
-            .map(iterator ->
-                Stream.generate(() -> null)
-                    .takeWhile(x -> iterator.hasNext())
-                    .map(n -> iterator.next()))
+            .map(iterator -> Stream.generate(() -> null).takeWhile(x -> iterator.hasNext()).map(n -> iterator.next()))
             // foreach stream, generate a map of (P, |P in stream(partition)|) and then from map to iterable of tuple
             .map(stream -> stream.collect(Collectors.groupingBy(Function.identity(), Collectors.summingInt(x -> 1))))
             .flatMapToPair(mapToIterable::call)
-            // group by key P, at most K pairs per group
-            .groupByKey()
-            // sum relative frequency, from (P, |P in partition|) to (P, Sum |P in partition|)
-            .map(tuple -> new Tuple2<>(tuple._1, StreamSupport.stream(tuple._2.spliterator(), false).reduce(0, Integer::sum)));
+            // same as group by ProductID and sum all partial counts
+            .reduceByKey(Integer::sum);
 
         final var pairs1 = H > 0 ?
             // take top H elements, using a ProductPopularityPairComparator, but reversed (top = highest)
