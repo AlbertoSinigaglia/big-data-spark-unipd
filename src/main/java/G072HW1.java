@@ -52,6 +52,8 @@ public class G072HW1 {
             .map(entry -> new Tuple2<>(entry.getKey(), entry.getValue()))
             .iterator();
 
+        System.out.println("Number of rows = " + rawData.count());
+
         final JavaRDD<Tuple2<String, Integer>> productCustomer = rawData
             // "explode" the lines
             .map( line -> line.split(","))
@@ -66,6 +68,7 @@ public class G072HW1 {
             // consider only the first one for each group
             .map(Tuple2::_1);
 
+        System.out.println("Product-Customer Pairs = " + productCustomer.count());
 
         final JavaPairRDD<String, Integer> productPopularity1 = productCustomer
             //from partitions to (P, |P in partitions|)
@@ -90,7 +93,7 @@ public class G072HW1 {
             });
 
         final JavaPairRDD<String, Integer> productPopularity2 = productCustomer
-            // from (P,C) to (rand(K), P) where K=sqrt(N)
+            // consider only (P,C)
             .map(Tuple2::_1)
             // group by rand(K)
             .groupBy(el -> randomGenerator.nextInt(K))
@@ -104,21 +107,17 @@ public class G072HW1 {
             // same as group by ProductID and sum all partial counts
             .reduceByKey(Integer::sum);
 
-        if(H == 0){
+        if(H == 0){ // 6
             final List<Tuple2<String, Integer>> pairs1 = productPopularity1.sortByKey().collect();
             final List<Tuple2<String, Integer>> pairs2 = productPopularity2.sortByKey().collect();
-            System.out.println("Number of rows = " + rawData.count());
-            System.out.println("Product-Customer Pairs = " + productCustomer.count());
             System.out.println("productPopularity1:");
-            System.out.println(pairs1.stream().map(t -> "Product: "+t._1+" Popularity: "+t._2+"; ").collect(Collectors.joining("")));
+            System.out.println(pairs1.stream().map(t -> "Product: "+t._1+" Popularity: "+t._2+";").collect(Collectors.joining(" ")));
             System.out.println("productPopularity2:");
-            System.out.println(pairs2.stream().map(t -> "Product: "+t._1+" Popularity: "+t._2+"; ").collect(Collectors.joining("")));
-        } else {
+            System.out.println(pairs2.stream().map(t -> "Product: "+t._1+" Popularity: "+t._2+";").collect(Collectors.joining(" ")));
+        } else { // 5
             final List<Tuple2<String, Integer>> pairs1 = productPopularity1.takeOrdered(H, new ProductPopularityPairComparator().reversed());
-            System.out.println("Number of rows = " + rawData.count());
-            System.out.println("Product-Customer Pairs = " + productCustomer.count());
             System.out.println("Top 5 Products and their Popularities");
-            System.out.println(pairs1.stream().map(t -> "Product "+t._1+" Popularity "+t._2+"; ").collect(Collectors.joining("")));
+            System.out.println(pairs1.stream().map(t -> "Product "+t._1+" Popularity "+t._2+";").collect(Collectors.joining(" ")));
         }
 
     }
