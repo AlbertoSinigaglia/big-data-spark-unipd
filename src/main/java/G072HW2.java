@@ -78,48 +78,60 @@ public class G072HW2 {
             }
         }
         System.out.println("Initial guess = "+r);
-        int guesses = 0;
+
+        int guesses = 1;
         final long wTot = W.stream().mapToLong(l -> l).sum();
 
         while(true){
-            guesses++;
             long wTemp = wTot;
             ArrayList<Pair> Z_pairs = new ArrayList<>(pairs);
             ArrayList<Vector> S = new ArrayList<>();
             while(S.size() < k && wTemp > 0){
                 long max = -1;
-                Vector newcenter = null;
-                for(Vector x : P){
+                Vector newCenter = null;
+                for(Pair x : pairs){
                     long ballWeight = 0;
-                    for (Pair z_pair : Z_pairs) {
-                        if (Math.sqrt(Vectors.sqdist(z_pair.vec, x)) <= (1 + 2 * alpha) * r) {
-                            ballWeight += z_pair.weight;
+                    for (Pair other : Z_pairs) {
+                        if (Math.sqrt(Vectors.sqdist(other.vec, x.vec)) <= (1 + 2 * alpha) * r) {
+                            ballWeight += other.weight;
                         }
                     }
                     if(ballWeight > max){
                         max = ballWeight;
-                        newcenter = x;
+                        newCenter = x.vec;
                     }
                 }
-                S.add(newcenter);
+                S.add(newCenter);
                 for(int i = 0; i < Z_pairs.size(); i++) {
-                    if (Math.sqrt(Vectors.sqdist(Z_pairs.get(i).vec, newcenter)) <= (3 + 4 * alpha) * r) {
+                    if (Math.sqrt(Vectors.sqdist(Z_pairs.get(i).vec, newCenter)) <= (3 + 4 * alpha) * r) {
                         wTemp -= Z_pairs.remove(i).weight;
+                        i--;
                     }
                 }
             }
             if(wTemp <= z){
-                System.out.println("Final guess = "+r);
-                System.out.println("Number of guesses = "+guesses);
+                System.out.println("Final guess = " + r);
+                System.out.println("Number of guesses = " + guesses);
                 return S;
             } else {
+                guesses++;
                 r = 2 * r;
             }
         }
     }
 
-    static float ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z){
-        return 0f;
+    static double ComputeObjective(ArrayList<Vector> P, ArrayList<Vector> S, int z){
+        ArrayList<Double> dist = new ArrayList<>();
+        for(Vector v1: P){
+            double min = Double.POSITIVE_INFINITY;
+            for(Vector v2: S){
+                min = Math.min(min, Math.sqrt(Vectors.sqdist(v1, v2)));
+            }
+            dist.add(min);
+        }
+        Collections.sort(dist);
+
+        return dist.get(dist.size() - 1 - z - 1);
     }
 
 
@@ -128,13 +140,14 @@ public class G072HW2 {
         final String path = args[0];
         final int K = Integer.parseInt(args[1]);
         final int Z = Integer.parseInt(args[2]);
-        final ArrayList<Vector> vectors =  readVectorsSeq(path);
-        final ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(vectors.size(), 1L));
-        System.out.println("Input size n = "+vectors.size());
+        final ArrayList<Vector> inputPoints =  readVectorsSeq(path);
+        final ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 1L));
+        System.out.println("Input size n = "+inputPoints.size());
         System.out.println("Number of centers k = "+K);
         System.out.println("Number of outliers z = "+Z);
-        final ArrayList<Vector> centers = SeqWeightedOutliers(vectors, weights, K, Z , 0);
-        System.out.println("Objective function = "+0);
+        final ArrayList<Vector> solution = SeqWeightedOutliers(inputPoints, weights, K, Z , 0);
+        final double objective = ComputeObjective(inputPoints, solution, Z);
+        System.out.println("Objective function = "+objective);
         System.out.println("Time of SeqWeightedOutliers = "+0);
     }
 
