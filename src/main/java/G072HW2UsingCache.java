@@ -2,17 +2,32 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.collection.immutable.Stream;
 
-public class G072HW2 {
-    static public class Pair{
+/**
+ *
+ *
+ *
+ *
+ *
+ *       GHE ZE UN BUG QUA,
+ *       MA TANTO E' APPURATO
+ *       CHE LA CACHE NON
+ *       AIUTA AFFATTO
+ *
+ *
+ *
+ *
+ *
+ */
+
+public class G072HW2UsingCache {
+    static public class VectorWeightPair {
         public Vector vec;
         public Long weight;
+        public Integer index;
 
         @Override
         public String toString() {
@@ -22,25 +37,29 @@ public class G072HW2 {
                 '}';
         }
 
-        public Pair(Vector vec, Long weight) {
+        public VectorWeightPair(Vector vec, Long weight, Integer index) {
             this.vec = vec;
             this.weight = weight;
+            this.index = index;
         }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            Pair pair = (Pair) o;
+            VectorWeightPair that = (VectorWeightPair) o;
 
-            if (!Objects.equals(vec, pair.vec)) return false;
-            return Objects.equals(weight, pair.weight);
+            if (!Objects.equals(vec, that.vec)) return false;
+            if (!Objects.equals(weight, that.weight)) return false;
+            return Objects.equals(index, that.index);
         }
 
         @Override
         public int hashCode() {
             int result = vec != null ? vec.hashCode() : 0;
             result = 31 * result + (weight != null ? weight.hashCode() : 0);
+            result = 31 * result + (index != null ? index.hashCode() : 0);
             return result;
         }
     }
@@ -65,49 +84,59 @@ public class G072HW2 {
         return result;
     }
 
-    static ArrayList<Vector> SeqWeightedOutliers(final ArrayList<Vector> P, final ArrayList<Long> W, final int k, final int z, final float alpha){
-        ArrayList<Pair> pairs = new ArrayList<>();
-        for(int i = 0 ; i < W.size(); i++){
-            pairs.add(new Pair(P.get(i), W.get(i)));
+
+    static void initCache(int N, ArrayList<VectorWeightPair> vec){
+        distances = new Double[N][N];
+        for(int i=0; i < N; i++){
+            for(int j=0; j < N; j++){
+                distances[vec.get(i).index][vec.get(j).index] = Math.sqrt(Vectors.sqdist(vec.get(i).vec, vec.get(j).vec));
+            }
         }
+    }
+    static Double[][] distances = null;
+    static double getDistance(VectorWeightPair v1, VectorWeightPair v2){
+        return distances[v1.index][v2.index];
+    }
+
+    static ArrayList<Vector> SeqWeightedOutliers(final ArrayList<Vector> P, final ArrayList<Long> W, final int k, final int z, final float alpha){
         double r = Double.POSITIVE_INFINITY;
+        ArrayList<VectorWeightPair> pairs = new ArrayList<>();
+        for(int i = 0 ; i < W.size(); i++){
+            pairs.add(new VectorWeightPair(P.get(i), W.get(i), i));
+        }
+        initCache(pairs.size(), pairs);
         for(int i = 0; i <  k + z + 1; i++) {
             for (int j = i + 1; j < k + z + 1; j++) {
-                r = Math.min(r, Math.sqrt(Vectors.sqdist(P.get(i), P.get(j))) / 2);
+                r = Math.min(r, getDistance(pairs.get(i), pairs.get(j)) / 2);
             }
         }
         System.out.println("Initial guess = "+r);
 
         int guesses = 1;
-        long wTot = 0;
-        for(long l :W){
-            wTot += l;
-        }
+        final long wTot = W.stream().mapToLong(l -> l).sum();
 
         while(true){
             long wTemp = wTot;
-            ArrayList<Pair> Z_pairs = new ArrayList<>(pairs);
+            ArrayList<VectorWeightPair> Z_pairs = new ArrayList<>(pairs);
             ArrayList<Vector> S = new ArrayList<>();
-            double rMin = (1 + 2 * alpha) * r;
-            double rMax = (3 + 4 * alpha) * r;
             while(S.size() < k && wTemp > 0){
                 long max = -1;
-                Vector newCenter = null;
-                for(Pair x : pairs){
+                VectorWeightPair newCenter = null;
+                for(VectorWeightPair x : pairs){
                     long ballWeight = 0;
-                    for (Pair other : Z_pairs) {
-                        if (Math.sqrt(Vectors.sqdist(other.vec, x.vec)) <= rMin) {
+                    for (VectorWeightPair other : Z_pairs) {
+                        if (getDistance(other, x) <= (1 + 2 * alpha) * r) {
                             ballWeight += other.weight;
                         }
                     }
                     if(ballWeight > max){
                         max = ballWeight;
-                        newCenter = x.vec;
+                        newCenter = x;
                     }
                 }
-                S.add(newCenter);
+                S.add(newCenter.vec);
                 for(int i = 0; i < Z_pairs.size(); i++) {
-                    if (Math.sqrt(Vectors.sqdist(Z_pairs.get(i).vec, newCenter)) <= rMax) {
+                    if (getDistance(Z_pairs.get(i), newCenter) <= (3 + 4 * alpha) * r) {
                         wTemp -= Z_pairs.remove(i).weight;
                         i--;
                     }

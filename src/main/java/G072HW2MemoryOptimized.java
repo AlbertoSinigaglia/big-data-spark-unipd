@@ -1,46 +1,41 @@
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.collection.immutable.Stream;
 
-public class G072HW2 {
-    static public class Pair{
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class G072HW2MemoryOptimized {
+    static public class Triple{
         public Vector vec;
         public Long weight;
+        public Long iter;
 
-        @Override
-        public String toString() {
-            return "Pair{" +
-                "vec=" + vec +
-                ", weight=" + weight +
-                '}';
-        }
-
-        public Pair(Vector vec, Long weight) {
+        public Triple(Vector vec, Long weight, Long iter) {
             this.vec = vec;
             this.weight = weight;
+            this.iter = iter;
         }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            Pair pair = (Pair) o;
+            Triple pair = (Triple) o;
 
-            if (!Objects.equals(vec, pair.vec)) return false;
-            return Objects.equals(weight, pair.weight);
+            if (vec != null ? !vec.equals(pair.vec) : pair.vec != null) return false;
+            if (weight != null ? !weight.equals(pair.weight) : pair.weight != null) return false;
+            return iter != null ? iter.equals(pair.iter) : pair.iter == null;
         }
 
         @Override
         public int hashCode() {
             int result = vec != null ? vec.hashCode() : 0;
             result = 31 * result + (weight != null ? weight.hashCode() : 0);
+            result = 31 * result + (iter != null ? iter.hashCode() : 0);
             return result;
         }
     }
@@ -66,10 +61,11 @@ public class G072HW2 {
     }
 
     static ArrayList<Vector> SeqWeightedOutliers(final ArrayList<Vector> P, final ArrayList<Long> W, final int k, final int z, final float alpha){
-        ArrayList<Pair> pairs = new ArrayList<>();
+        ArrayList<Triple> triples = new ArrayList<>();
         for(int i = 0 ; i < W.size(); i++){
-            pairs.add(new Pair(P.get(i), W.get(i)));
+            triples.add(new Triple(P.get(i), W.get(i), 0L));
         }
+
         double r = Double.POSITIVE_INFINITY;
         for(int i = 0; i <  k + z + 1; i++) {
             for (int j = i + 1; j < k + z + 1; j++) {
@@ -86,30 +82,29 @@ public class G072HW2 {
 
         while(true){
             long wTemp = wTot;
-            ArrayList<Pair> Z_pairs = new ArrayList<>(pairs);
             ArrayList<Vector> S = new ArrayList<>();
             double rMin = (1 + 2 * alpha) * r;
             double rMax = (3 + 4 * alpha) * r;
             while(S.size() < k && wTemp > 0){
                 long max = -1;
                 Vector newCenter = null;
-                for(Pair x : pairs){
+                for(Vector x : P){
                     long ballWeight = 0;
-                    for (Pair other : Z_pairs) {
-                        if (Math.sqrt(Vectors.sqdist(other.vec, x.vec)) <= rMin) {
-                            ballWeight += other.weight;
+                    for (int i =0 ; i < triples.size(); i++) {
+                        if (triples.get(i).iter != guesses && Math.sqrt(Vectors.sqdist(triples.get(i).vec, x)) <= rMin) {
+                            ballWeight += triples.get(i).weight;
                         }
                     }
                     if(ballWeight > max){
                         max = ballWeight;
-                        newCenter = x.vec;
+                        newCenter = x;
                     }
                 }
                 S.add(newCenter);
-                for(int i = 0; i < Z_pairs.size(); i++) {
-                    if (Math.sqrt(Vectors.sqdist(Z_pairs.get(i).vec, newCenter)) <= rMax) {
-                        wTemp -= Z_pairs.remove(i).weight;
-                        i--;
+                for(int i = 0; i < triples.size(); i++) {
+                    if (triples.get(i).iter != guesses && Math.sqrt(Vectors.sqdist(triples.get(i).vec, newCenter)) <= rMax) {
+                        wTemp -= triples.get(i).weight;
+                        triples.get(i).iter = (long) guesses;
                     }
                 }
             }
@@ -156,5 +151,4 @@ public class G072HW2 {
         System.out.println("Objective function = "+objective);
         System.out.println("Time of SeqWeightedOutliers = "+(endTime - startTime));
     }
-
 }

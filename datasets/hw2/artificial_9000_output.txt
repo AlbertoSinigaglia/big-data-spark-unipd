@@ -28,37 +28,3 @@ Final guess = 11.800935725610909
 Number of guesses = 3
 Objective function = 35.154091838646615
 Time of SeqWeightedOutliers = 8832
-
-
-
-Input size n =  9200
-Number of centers k =  9
-Number of outliers z =  300
-Initial guess =  0.06208461967347653
-Final guess =  3.973415659102498
-Number of guesses =  7
-Objective function =  11.191868521386407
-Time of SeqWeightedOutliers =  544602.6632785797
-
-
-
-Input size n =  9200
-Number of centers k =  9
-Number of outliers z =  200
-Initial guess =  0.32053860921891925
-Final guess =  5.128617747502708
-Number of guesses =  5
-Objective function =  11.576939707884812
-Time of SeqWeightedOutliers =  382610.8775138855
-
-
-
-
-Input size n =  9200
-Number of centers k =  9
-Number of outliers z =  0
-Initial guess =  2.9502339314027273
-Final guess =  11.800935725610909
-Number of guesses =  3
-Objective function =  35.154091838646615
-Time of SeqWeightedOutliers =  169261.5430355072
