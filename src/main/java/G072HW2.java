@@ -135,7 +135,7 @@ public class G072HW2 {
         }
         Collections.sort(dist);
 
-        return dist.get(dist.size() - 1 - z - 1);
+        return dist.get(dist.size() - 1 - z);
     }
 
 

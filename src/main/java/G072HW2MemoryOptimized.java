@@ -130,7 +130,7 @@ public class G072HW2MemoryOptimized {
         }
         Collections.sort(dist);
 
-        return dist.get(dist.size() - 1 - z - 1);
+        return dist.get(dist.size() - 1 - z);
     }
 
 
