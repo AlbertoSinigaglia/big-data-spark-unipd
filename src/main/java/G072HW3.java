@@ -11,6 +11,7 @@ import scala.Serializable;
 import scala.Tuple2;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class G072HW3 {
@@ -276,9 +277,9 @@ public class G072HW3 {
         }
     }
     static ArrayList<Vector> SeqWeightedOutliers(final ArrayList<Vector> P, final ArrayList<Long> W, final int k, final int z, final float alpha){
-        ArrayList<G072HW2.Pair> pairs = new ArrayList<>();
+        ArrayList<Pair> pairs = new ArrayList<>();
         for(int i = 0 ; i < W.size(); i++){
-            pairs.add(new G072HW2.Pair(P.get(i), W.get(i)));
+            pairs.add(new Pair(P.get(i), W.get(i)));
         }
         double r = Double.POSITIVE_INFINITY;
         for(int i = 0; i <  k + z + 1; i++) {
@@ -296,16 +297,16 @@ public class G072HW3 {
 
         while(true){
             long wTemp = wTot;
-            ArrayList<G072HW2.Pair> Z_pairs = new ArrayList<>(pairs);
+            ArrayList<Pair> Z_pairs = new ArrayList<>(pairs);
             ArrayList<Vector> S = new ArrayList<>();
             double rMin = (1 + 2 * alpha) * r;
             double rMax = (3 + 4 * alpha) * r;
             while(S.size() < k && wTemp > 0){
                 long max = -1;
                 Vector newCenter = null;
-                for(G072HW2.Pair x : pairs){
+                for(Pair x : pairs){
                     long ballWeight = 0;
-                    for (G072HW2.Pair other : Z_pairs) {
+                    for (Pair other : Z_pairs) {
                         if (Math.sqrt(Vectors.sqdist(other.vec, x.vec)) <= rMin) {
                             ballWeight += other.weight;
                         }
@@ -342,7 +343,7 @@ public class G072HW3 {
 
     public static double computeObjective (JavaRDD<Vector> points, ArrayList<Vector> centers, int z)
     {
-        return points.map(p -> {
+        /*return points.map(p -> {
             double minDist = Double.POSITIVE_INFINITY;
             for(Vector v : centers){
                 double dist = euclidean(p, v);
@@ -367,7 +368,22 @@ public class G072HW3 {
                 listDistances._2.forEach(all::addAll);
                 Collections.sort(all);
                 return all.get(all.size() - z );
-        }).collect().get(0);
+        }).collect().get(0);*/
+        return points.map(p -> {
+                double minDist = Double.POSITIVE_INFINITY;
+                for(Vector v : centers){
+                    double dist = euclidean(p, v);
+                    if(dist < minDist){
+                        minDist = dist;
+                    }
+                }
+                return minDist;
+            })
+            .top(z+1)
+            .stream()
+            .mapToDouble(d -> d)
+            .min()
+            .orElse(0);
     }
 
 }
