@@ -6,23 +6,21 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.Array;
 import scala.Serializable;
 import scala.Tuple2;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class G072HW3 {
 
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-// MAIN PROGRAM 
+// MAIN PROGRAM
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
 
         if (args.length != 4) {
             throw new IllegalArgumentException("USAGE: filepath k z L");
@@ -125,11 +123,11 @@ public class G072HW3 {
         }); // END OF ROUND 1
 
         //------------- ROUND 2 ---------------------------
-        long start = System.currentTimeMillis();
+        long start_1 = System.currentTimeMillis();
         ArrayList<Tuple2<Vector, Long>> elems = new ArrayList<>((k+z)*L);
         elems.addAll(coreset.collect());
-        long end = System.currentTimeMillis();
-        System.out.println("Time taken by round 1: " + (end-start) + " ms");
+        long end_1 = System.currentTimeMillis();
+
 
         //
         // ****** ADD YOUR CODE
@@ -137,34 +135,18 @@ public class G072HW3 {
         // ****** Measure and print times taken by Round 1 and Round 2, separately
         // ****** Return the final solution
         //
-
-        /*JavaRDD<ArrayList<Vector>> centersRDD = coreset
-            .groupBy(el -> null)
-            .map(all -> {
-                ArrayList<Vector> vec = new ArrayList<>();
-                ArrayList<Long> weights = new ArrayList<>();
-                all._2.forEach(el -> {
-                    vec.add(el._1);
-                    weights.add(el._2);
-                });
-                return SeqWeightedOutliers(
-                    vec,
-                    weights,
-                    k, z, 2);
-            });*/
-
-
         ArrayList<Vector> centers = new ArrayList<>(k);
-        start = System.currentTimeMillis();
-        centers.addAll(
-            SeqWeightedOutliers(
-                new ArrayList<>(elems.stream().map(el -> el._1).collect(Collectors.toList())),
-                new ArrayList<>(elems.stream().map(el -> el._2).collect(Collectors.toList())),
-                k, z, 2
-            )
-        );
-        end = System.currentTimeMillis();
-        System.out.println("Time taken by round 2: " + (end-start) + " ms");
+        long start_2 = System.currentTimeMillis();
+        ArrayList<Vector> vecs = new ArrayList<>(elems.size());
+        ArrayList<Long> weights = new ArrayList<>(elems.size());
+        for(Tuple2<Vector, Long> elem: elems){
+            vecs.add(elem._1);
+            weights.add(elem._2);
+        }
+        centers.addAll(SeqWeightedOutliers(vecs, weights, k, z, 2));
+        long end_2 = System.currentTimeMillis();
+        System.out.println("Time taken by round 1: " + (end_1-start_1) + " ms");
+        System.out.println("Time taken by round 2: " + (end_2-start_2) + " ms");
         return centers;
 
     }
@@ -338,37 +320,11 @@ public class G072HW3 {
 
 
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-// Method computeObjective: computes objective function  
+// Method computeObjective: computes objective function
 // &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
     public static double computeObjective (JavaRDD<Vector> points, ArrayList<Vector> centers, int z)
     {
-        /*return points.map(p -> {
-            double minDist = Double.POSITIVE_INFINITY;
-            for(Vector v : centers){
-                double dist = euclidean(p, v);
-                if(dist < minDist){
-                    minDist = dist;
-                }
-            }
-            return minDist;
-        }).mapPartitionsToPair(listDistances -> {
-            ArrayList<Double> dists = new ArrayList<Double>(z+1);
-            while(listDistances.hasNext()){
-                dists.add(listDistances.next());
-            }
-            Collections.sort(dists);
-            return Collections.singletonList(
-                new Tuple2<>(null, new ArrayList<>(dists.subList(dists.size() - 1 - z - 1, dists.size()-1)))
-            ).iterator();
-        })
-            .groupByKey()
-            .mapToDouble(listDistances -> {
-                ArrayList<Double> all = new ArrayList<>();
-                listDistances._2.forEach(all::addAll);
-                Collections.sort(all);
-                return all.get(all.size() - z );
-        }).collect().get(0);*/
         return points.map(p -> {
                 double minDist = Double.POSITIVE_INFINITY;
                 for(Vector v : centers){

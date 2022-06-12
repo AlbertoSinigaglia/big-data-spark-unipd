@@ -145,6 +145,14 @@ public class G072HW2 {
         final int K = Integer.parseInt(args[1]);
         final int Z = Integer.parseInt(args[2]);
         final ArrayList<Vector> inputPoints =  readVectorsSeq(path);
+
+        double max = 0;
+        for(Vector v1 : inputPoints){
+            for(Vector v2 : inputPoints){
+                max = Math.max(max,Math.sqrt(Vectors.sqdist(v1, v2)));
+            }
+        }
+        System.out.println(max);
         final ArrayList<Long> weights = new ArrayList<>(Collections.nCopies(inputPoints.size(), 1L));
         System.out.println("Input size n = "+inputPoints.size());
         System.out.println("Number of centers k = "+K);
@@ -155,6 +163,14 @@ public class G072HW2 {
         final double objective = ComputeObjective(inputPoints, solution, Z);
         System.out.println("Objective function = "+objective);
         System.out.println("Time of SeqWeightedOutliers = "+(endTime - startTime));
+
+         max = 0;
+        for(Vector v1 : solution){
+            for(Vector v2 : solution){
+                max = Math.max(max,Math.sqrt(Vectors.sqdist(v1, v2)));
+            }
+        }
+        System.out.println(max);
     }
 
 }
